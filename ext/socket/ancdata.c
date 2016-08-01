@@ -771,6 +771,28 @@ anc_inspect_socket_creds(int level, int type, VALUE data, VALUE ret)
 }
 #endif
 
+#if defined(IPPROTO_IP) /* All uses of inet_ntop are from IPPROTO_IP */
+#ifdef __HAIKU__
+#define HAVE_INET_NTOP
+#endif
+#ifndef HAVE_INET_NTOP /* solaris < 10u6 */
+static const char *
+inet_ntop(int af, const void *addr, char *numaddr, size_t numaddr_len)
+{
+#ifdef HAVE_INET_NTOA
+	struct in_addr in;
+	memcpy(&in.s_addr, addr, sizeof(in.s_addr));
+	snprintf(numaddr, numaddr_len, "%s", inet_ntoa(in));
+#else
+	unsigned long x = ntohl(*(unsigned long*)addr);
+	snprintf(numaddr, numaddr_len, "%d.%d.%d.%d",
+		 (int) (x>>24) & 0xff, (int) (x>>16) & 0xff,
+		 (int) (x>> 8) & 0xff, (int) (x>> 0) & 0xff);
+#endif
+	return numaddr;
+}
+#endif
+
 #if defined(IPPROTO_IP) && defined(IP_RECVDSTADDR) /* 4.4BSD */
 static int
 anc_inspect_ip_recvdstaddr(int level, int type, VALUE data, VALUE ret)
